@@ -1,0 +1,207 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX 100000
+
+struct Transaction 
+{
+    char type[10]; 
+    float amount;
+    struct Transaction* next;
+} ;
+
+struct Transaction* push(struct Transaction* top, char type[], float amount);
+
+struct Transaction* pop(struct Transaction* top);
+
+void display(struct Transaction* top);
+
+void clearHistory(struct Transaction** top);
+
+float currentBalance(struct Transaction* top);
+
+void printMenu();
+
+struct Transaction* push(struct Transaction* top, char type[], float amount) 
+{
+    struct Transaction* newTransaction = (struct Transaction*)malloc(sizeof(struct Transaction));
+    if (!newTransaction) 
+    {
+        printf("Memory allocation failed\n");
+        return top;
+    }
+    strcpy(newTransaction->type, type);
+    newTransaction->amount = amount;
+    newTransaction->next = top;
+    top = newTransaction;
+    return top;
+}
+
+struct Transaction* pop(struct Transaction* top) 
+{
+    if (top == NULL) 
+    {
+        printf("No transaction to undo.\n");
+        return NULL;
+    }
+    struct Transaction* temp = top;
+    top = top->next;
+    printf("Undoing transaction: %s of ₹%.2f\n", temp->type, temp->amount);
+    free(temp);
+    return top;
+}
+
+void display(struct Transaction* top) 
+{
+    if (top == NULL) 
+    {
+        printf("No transactions available.\n");
+        return;
+    }
+    struct Transaction* temp = top;
+    printf("\nTransaction History:\n");
+    while (temp != NULL) 
+    {
+        printf("%s of ₹%.2f\n", temp->type, temp->amount);
+        temp = temp->next;
+    }
+}
+
+void clearHistory(struct Transaction** top) 
+{
+    struct Transaction* temp;
+    while (*top != NULL) 
+    {
+        temp = *top;
+        *top = (*top)->next;
+        free(temp);
+    }
+    printf("Transaction history cleared.\n");
+}
+
+float currentBalance(struct Transaction* top) 
+{
+    float balance = 0;
+    while (top != NULL) 
+    {
+        if (strcmp(top->type, "Deposit") == 0) 
+        {
+            balance += top->amount;
+        }
+        else if (strcmp(top->type, "Withdraw") == 0) 
+        {
+            balance -= top->amount;
+        }
+        top = top->next;
+    }
+    return balance;
+}
+
+void printMenu() 
+{
+    printf("\n1. Add Deposit\n");
+    printf("2. Add Withdrawal\n");
+    printf("3. Undo Last Transaction\n");
+    printf("4. View Transaction History\n");
+    printf("5. View Current Balance\n");
+    printf("6. Clear Transaction History\n");
+    printf("7. Exit\n");
+    printf("Enter your choice: ");
+}
+
+int main()
+{
+    struct Transaction* transactionHistory = NULL;
+    int choice;
+    float amount;
+    char type[10];
+    float balance = 0;
+    int maxUndo = 3, undoCount = 0;
+
+    while (1) 
+    {
+        printMenu();
+        scanf("%d", &choice);
+
+        switch (choice) 
+        {
+            case 1:
+                printf("Enter deposit amount (in ₹): ");
+                scanf("%f", &amount);
+                if (amount <= 0) 
+                {
+                    printf("Invalid amount. Please enter a valid amount.\n");
+                } 
+                else if (amount > MAX) 
+                {
+                    printf("Deposit amount exceeds the limit of ₹%.2f.\n", (float)MAX);
+                }
+                else
+                {
+                    transactionHistory = push(transactionHistory, "Deposit", amount);
+                    printf("Transaction added: Deposit of ₹%.2f\n", amount);
+                }
+                undoCount = 0;
+                break;
+
+            case 2:
+                printf("Enter withdrawal amount (in ₹): ");
+                scanf("%f", &amount);
+                balance = currentBalance(transactionHistory);
+                if (amount <= 0)
+                {
+                    printf("Invalid amount. Please enter a valid amount.\n");
+                } 
+                else if(amount > balance) 
+                {
+                    printf("Insufficient balance. Your current balance is ₹%.2f.\n", balance);
+                }
+                else if (amount > MAX) 
+                {
+                    printf("Withdrawal amount exceeds the limit of ₹%.2f.\n", (float)MAX);
+                } 
+                else
+                {
+                    transactionHistory = push(transactionHistory, "Withdraw", amount);
+                    printf("Transaction added: Withdrawal of ₹%.2f\n", amount);
+                }
+                undoCount = 0;
+                break;
+
+            case 3:
+                if (undoCount < maxUndo)
+                {
+                    transactionHistory = pop(transactionHistory);
+                    undoCount++;
+                } 
+                else
+                {
+                    printf("You have reached the maximum undo limit of %d actions.\n", maxUndo);
+                }
+                break;
+
+            case 4:
+                display(transactionHistory);
+                break;
+
+            case 5:
+                balance = currentBalance(transactionHistory);
+                printf("Current balance: ₹%.2f\n", balance);
+                break;
+
+            case 6:
+                clearHistory(&transactionHistory);
+                break;
+
+            case 7:
+                printf("Exiting...\n");
+                clearHistory(&transactionHistory);
+                exit(0);
+
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    }
+    return 0;
+}
